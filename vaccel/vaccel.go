@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+	"strconv"
 )
 
 
@@ -26,22 +27,23 @@ type vAccelInfo struct {
 type vAccelType int
 
 
-const (
-	vsock vAccelType = iota // vAccel vsock transport
-	virtio // vAccel virtio trasport
-)
+//const (
+//	VaccelVsock vAccelType = iota // vAccel vsock transport
+//	VaceelVirtio // vAccel virtio trasport
+//)
 
-type guestBackend struct {
-	vaccelType vAccelType
+//type GuestBackend struct {
+//	VaccelType vAccelType
 	//vaccel interface
-}
+//}
 
 // firecracker is an Hypervisor interface implementation for the firecracker VMM.
 type Vaccel struct {
 	VaccelPath    string //Path to vaccel installation on host
 	HostBackend   string //Vaccel backend framework
-	GuestBackend  guestBackend //Vaccel transport layer (vsock or virtio)
+	GuestBackend  string //Vaccel transport layer (vsock or virtio)
 	SocketPath    string //vsock specific.. move this to guestBackend
+	SocketPort    uint32 //vsock specific.. move this to guestBackend
 
 	info vAccelInfo //vaccelrt-agent info, also vsock specific
 
@@ -73,7 +75,6 @@ func (fc *firecracker) Accelarators(ctx context.Context, timeout int) error {
 		//call vaccelrtAgent()
 	case virtio:
 		//*TODO* os.Setenv VACCEL_BACKENDS, IMAGESNET etc
-	default:
 	}
 }*/
 
@@ -90,7 +91,9 @@ func (vaccel *Vaccel) VaccelInit() error {
 	vaccelrtBack := filepath.Join(vaccelrtLibs, vaccel.HostBackend)
 	fmt.Println("vaccelrtBack:", vaccelrtBack)
 	fmt.Println("vaccelSocketPath:", vaccel.SocketPath)
-	args = append(args, "--server-address", vaccel.SocketPath)
+	server_address := "unix://" + vaccel.SocketPath + "_" + strconv.FormatUint(uint64(vaccel.SocketPort), 10)
+	fmt.Println("server-address:", server_address)
+	args = append(args, "--server-address", server_address)
 	fmt.Println("args:", args)
 	vaccel_backends := "VACCEL_BACKENDS=" + vaccelrtBack
 	vaccel_debug := "VACCEL_DEBUG_LEVEL=" + "4"

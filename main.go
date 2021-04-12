@@ -17,13 +17,14 @@ func main() {
 		VaccelPath: "/root/olagkasn/vaccel-vsock-kata/vaccel-release/opt/",
 		HostBackend: "libvaccel-jetson.so",
 		//guestBackend: guestback,
-		SocketPath: "unix:///home/olagkasn/testvaccel.vsock_2048",
+		SocketPath: "unix:///home/olagkasn/testvaccel.vsock",
+		SocketPort: 2048,
 	}
 	os.Setenv("VACCEL_DEBUG_LEVEL", "4")
 	fmt.Println("main: calling VaccelInit")
 	fmt.Println("ENV:", os.Environ())
 	vaccel.VaccelInit()
 	fmt.Println("main: calling VaccelEnd")
-	vaccel.VaccelEnd()
+	//vaccel.VaccelEnd()
 
 }
