@@ -15,7 +15,7 @@ func main() {
 
 	vaccel := vaccel.Vaccel{
 		VaccelPath: "/root/olagkasn/vaccel-vsock-kata/vaccel-release/opt/",
-		HostBackend: "libvaccel-jetson.so",
+		HostBackend: "libvaccel-noop.so",
 		//guestBackend: guestback,
 		SocketPath: "unix:///home/olagkasn/testvaccel.vsock",
 		SocketPort: 2048,

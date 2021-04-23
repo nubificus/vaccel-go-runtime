@@ -27,16 +27,6 @@ type vAccelInfo struct {
 type vAccelType int
 
 
-//const (
-//	VaccelVsock vAccelType = iota // vAccel vsock transport
-//	VaceelVirtio // vAccel virtio trasport
-//)
-
-//type GuestBackend struct {
-//	VaccelType vAccelType
-	//vaccel interface
-//}
-
 // firecracker is an Hypervisor interface implementation for the firecracker VMM.
 type Vaccel struct {
 	VaccelPath    string //Path to vaccel installation on host
@@ -50,61 +40,26 @@ type Vaccel struct {
 	vaccelrtd *exec.Cmd           //Tracks the vaccelrt-agent, vsock specific
 }
 
-/*// This should be implemented in virtcontainers/fc.go for firecracker
-func (fc *firecracker) Accelarators(ctx context.Context, timeout int) error {
-        accelerators := fc.config.MachineAccelerators
-        if accelerators != "" {
-		for _, accelerator := range strings.Split(h.MachineAccelerators, ",") {
-	                switch strings.TrimSpace(accelerator){
-			case "vaccel-vsock":
-				// add vaccl.VaccelPath and vsockPath and call vaccel.VaccelInit
-			case "vaccel-virtio":
-				//TODO call vaccel.VaccelInit with vAccelType = virtio
-			default:
-
-			}
-		}
-
-        }
-}
-*/
-
-/*func (vaccel *Vaccel) VaccelInit() {
-	switch vaccel.guestBackend.vaccelType {
-	case vsock:
-		//call vaccelrtAgent()
-	case virtio:
-		//*TODO* os.Setenv VACCEL_BACKENDS, IMAGESNET etc
-	}
-}*/
-
 // This is the vsock implementation (will be renamed to vaccelrtAgent
 func (vaccel *Vaccel) VaccelInit() error {
 
 	var cmd *exec.Cmd
 	var args []string
 
+	// Create the right environment for the vaccelrt-agent
 	vaccelrtBin := filepath.Join(vaccel.VaccelPath, "bin", "vaccelrt-agent")
-	fmt.Println("vaccelrt-agent:", vaccelrtBin)
 	vaccelrtLibs := filepath.Join(vaccel.VaccelPath, "lib")
-	fmt.Println("vaccelrtLibs:", vaccelrtLibs)
 	vaccelrtBack := filepath.Join(vaccelrtLibs, vaccel.HostBackend)
-	fmt.Println("vaccelrtBack:", vaccelrtBack)
-	fmt.Println("vaccelSocketPath:", vaccel.SocketPath)
-	server_address := "unix://" + vaccel.SocketPath + "_" + strconv.FormatUint(uint64(vaccel.SocketPort), 10)
-	fmt.Println("server-address:", server_address)
-	args = append(args, "--server-address", server_address)
-	fmt.Println("args:", args)
 	vaccel_backends := "VACCEL_BACKENDS=" + vaccelrtBack
 	vaccel_debug := "VACCEL_DEBUG_LEVEL=" + "4"
 	ld_path := "LD_LIBRARY_PATH=" + vaccelrtLibs
-	fmt.Println("EXTRA ENV:", vaccel_backends, ld_path, vaccel_debug)
+
+	server_address := "unix://" + vaccel.SocketPath + "_" + strconv.FormatUint(uint64(vaccel.SocketPort), 10)
+	args = append(args, "--server-address", server_address)
+
 	cmd = exec.Command(vaccelrtBin, args...)
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, vaccel_backends, ld_path)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	fmt.Println("calling cmd.Start\n")
 
 	if err := cmd.Start(); err != nil {
 		return err
