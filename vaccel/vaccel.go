@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 	"strconv"
+	"strings"
 )
 
 
@@ -30,7 +31,7 @@ type vAccelType int
 // firecracker is an Hypervisor interface implementation for the firecracker VMM.
 type Vaccel struct {
 	VaccelPath    string //Path to vaccel installation on host
-	HostBackend   string //Vaccel backend framework
+	HostBackends  string //Vaccel backend framework
 	GuestBackend  string //Vaccel transport layer (vsock or virtio)
 	SocketPath    string //vsock specific.. move this to guestBackend
 	SocketPort    uint32 //vsock specific.. move this to guestBackend
@@ -40,26 +41,42 @@ type Vaccel struct {
 	vaccelrtd *exec.Cmd           //Tracks the vaccelrt-agent, vsock specific
 }
 
+func (vaccel *Vaccel) VaccelEnv() []string {
+
+	var vaccelEnv []string
+	var vaccelrtBack string
+
+	vaccelrtLibs := filepath.Join(vaccel.VaccelPath, "lib")
+	for _, backend := range strings.Split(vaccel.HostBackends, ",") {
+		vaccelrtBack += filepath.Join(vaccelrtLibs, "libvaccel-" + strings.TrimSpace(backend) + ".so") + ","
+	}
+	vaccel_backends := "VACCEL_BACKENDS=" + vaccelrtBack
+	ld_path := "LD_LIBRARY_PATH=" + vaccelrtLibs
+
+	vaccelEnv = append(vaccelEnv, vaccel_backends, ld_path)
+
+	if strings.Contains(vaccel.HostBackends, "jetson") {
+		vaccel_imagenet := "VACCEL_IMAGENET_NETWORKS=" + filepath.Join(vaccel.VaccelPath, "share/data/networks")
+		cuda_cache := "CUDA_CACHE_PATH=/tmp/"
+		vaccelEnv = append(vaccelEnv, vaccel_imagenet, cuda_cache)
+        }
+
+	return vaccelEnv
+}
 // This is the vsock implementation (will be renamed to vaccelrtAgent
 func (vaccel *Vaccel) VaccelInit() error {
 
 	var cmd *exec.Cmd
 	var args []string
-
 	// Create the right environment for the vaccelrt-agent
 	vaccelrtBin := filepath.Join(vaccel.VaccelPath, "bin", "vaccelrt-agent")
-	vaccelrtLibs := filepath.Join(vaccel.VaccelPath, "lib")
-	vaccelrtBack := filepath.Join(vaccelrtLibs, vaccel.HostBackend)
-	vaccel_backends := "VACCEL_BACKENDS=" + vaccelrtBack
-	vaccel_debug := "VACCEL_DEBUG_LEVEL=" + "4"
-	ld_path := "LD_LIBRARY_PATH=" + vaccelrtLibs
 
 	server_address := "unix://" + vaccel.SocketPath + "_" + strconv.FormatUint(uint64(vaccel.SocketPort), 10)
 	args = append(args, "--server-address", server_address)
 
 	cmd = exec.Command(vaccelrtBin, args...)
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, vaccel_backends, ld_path)
+	cmd.Env = append(cmd.Env, vaccel.VaccelEnv()...)
 
 	if err := cmd.Start(); err != nil {
 		return err

@@ -14,16 +14,16 @@ import (
 func main() {
 
 	vaccel := vaccel.Vaccel{
-		VaccelPath: "/root/olagkasn/vaccel-vsock-kata/vaccel-release/opt/",
-		HostBackend: "libvaccel-noop.so",
+		VaccelPath: "/home/olagkasn/vaccel_featkata_Release",
+		HostBackends: "noop,jetson",
 		//guestBackend: guestback,
 		SocketPath: "unix:///home/olagkasn/testvaccel.vsock",
 		SocketPort: 2048,
 	}
 	os.Setenv("VACCEL_DEBUG_LEVEL", "4")
 	fmt.Println("main: calling VaccelInit")
-	fmt.Println("ENV:", os.Environ())
 	vaccel.VaccelInit()
+	fmt.Println("ENV:", vaccel.VaccelEnv())
 	fmt.Println("main: calling VaccelEnd")
 	//vaccel.VaccelEnd()
 
